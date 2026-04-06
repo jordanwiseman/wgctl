@@ -74,7 +74,7 @@ fi
 [ ! -d "$DB_PATH" ] && error_handler $ERR_DB_PATH_NOT_EXIST
 
 # Validate commands
-for cmd in "wg" "wg-quick" "find" "jq"; do
+for cmd in "wg" "wg-quick" "find" "jq" "openssl"; do
     if ! command -v "$cmd" &> /dev/null; then
         error_handler $ERR_MISSING_TOOL
     fi
