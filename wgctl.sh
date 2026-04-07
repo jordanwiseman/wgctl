@@ -463,8 +463,7 @@ apply_interface() {
             | "\n[Peer]\nPublicKey = \(.value.publicKey)\nAllowedIPs = \(.value.allowedIPs)"' <<< "$json_config"
 
         # add a PSK if one exists for the peer
-        local usePSK 
-        usePSK = jq -r --arg peer "$peer_name" '.peers[$peer].usePSK' <<< "$json_config"
+        local usePSK= $(jq -r --arg peer "$peer_name" '.peers[$peer].usePSK' <<< "$json_config")
         if [ ! -z  $usePSK ]; then
             "\nPresharedKey = $usePSK"
         fi
