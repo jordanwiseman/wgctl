@@ -460,13 +460,8 @@ apply_interface() {
         ' <<< "$json_config"
         # Build the peers section (one block per peer, with an empty line preceding each)
         jq -r '.peers | to_entries[] | select(.value.status == "enable")
-            | "\n[Peer]\nPublicKey = \(.value.publicKey)\nAllowedIPs = \(.value.allowedIPs)"' <<< "$json_config"
-
-        # add a PSK if one exists for the peer
-        local usePSK= $(jq -r --arg peer "$peer_name" '.peers[$peer].usePSK' <<< "$json_config")
-        if [ ! -z  $usePSK ]; then
-            "\nPresharedKey = $usePSK"
-        fi
+            | "\n[Peer]\nPublicKey = \(.value.publicKey)\nAllowedIPs = \(.value.allowedIPs)"
+            + (.value.usePSK? // empty | "\nPresharedKey = \(.)"' <<< "$json_config"
     )
 
     # Save WireGuard configuration to file
