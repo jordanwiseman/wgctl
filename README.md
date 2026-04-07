@@ -126,6 +126,7 @@ wgctl help
   **Options:**
   - `private-key <key>` – Specify the peer’s private key.
   - `allowed-ips <ips>` – Specify allowed IPs (auto-calculated if omitted).
+  - `use-psk [psk]` - Generate or use supplied PSK for added privacy.
 
 - **remove**  
   Remove a peer from an interface.

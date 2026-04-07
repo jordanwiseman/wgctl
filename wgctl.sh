@@ -702,7 +702,7 @@ export_peer() {
     peer_config+="Endpoint = $endpoint:$listen_port\n"
     peer_config+="AllowedIPs = 0.0.0.0/0, ::"
 
-    # add a PSK if exists
+    # add a PSK if one exists for the peer
     local use_psk=$(jq -r --arg peer "$peer_name" '.peers[$peer].usePSK' <<< "$json_config")
     if [ -n $use_psk ]; then
         peer_config+="\nPresharedKey = $use_psk"
@@ -734,6 +734,7 @@ int_to_ip() {
 # Options:
 #   private-key <key>         Private key
 #   allowed-ips <ips>         Allowed IPs
+#   use-psk [psk]             PresharedKey  
 add_peer() {
     # Validate peer name
     local peer_name="$1"
