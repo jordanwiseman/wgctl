@@ -30,6 +30,7 @@ ERR_FAILED_TO_DELETE_INTERFACE=24
 ERR_PEER_ALREADY_EXISTS=25
 ERR_PEER_NOT_FOUND=26
 ERR_INVALID_PEER_NAME=27
+ERR_MISSING_VALUE=28
 
 # Error Handler function
 error_handler() {
@@ -59,6 +60,7 @@ error_handler() {
         $ERR_PEER_ALREADY_EXISTS) echo "Error: Peer already exists" >&2 ;;
         $ERR_PEER_NOT_FOUND) echo "Error: Peer not found" >&2 ;;
         $ERR_INVALID_PEER_NAME) echo "Error: Invalid peer name" >&2 ;;
+        $ERR_MISSING_VALUE) echo "Error: Missing a value needed by an option" >&2 ;;
         *) echo "Error: Unknown error" >&2 ;;
     esac
     exit "$code"
@@ -697,6 +699,14 @@ export_peer() {
     peer_config+="PublicKey = $public_key\n"
     peer_config+="Endpoint = $endpoint:$listen_port\n"
     peer_config+="AllowedIPs = 0.0.0.0/0, ::/0"
+
+    # add a PSK if exists
+    local use_psk=$(jq -r --arg peer "$peer_name" '.peers[$peer].privateKey' <<< "$json_config")
+    if [ -n $use_psk ] then
+        peer_config+="PresharedKey = $use_psk\n"
+    fi
+
+    # output config
     echo -e "$peer_config"
 
     return 0
@@ -760,24 +770,47 @@ add_peer() {
     fi
 
     # Parse arguments
-    local private_key="" allowed_ips=""
+    # (using a different pattern as "use-psk" may not have a value passed)
+    local private_key="" allowed_ips="" use_psk="" use_psk="" generate_psk=false
+
     while [[ $# -gt 0 ]]; do
-        local key="$1"
-        shift
-        case "$key" in
+        case "$1" in
             private-key)
-                private_key="$1"
-                shift
+                if [[ -n "$2" && ! "$2" =~ ^(private-key|allowed-ips|use-psk)$ ]]; then
+                    private_key="$2"
+                    shift 2
+                else
+                    return $ERR_MISSING_VALUE
+                fi
                 ;;
             allowed-ips)
-                allowed_ips="$1"
-                shift
+                if [[ -n "$2" && ! "$2" =~ ^(private-key|allowed-ips|use-psk)$ ]]; then
+                    allowed_ips="$2"
+                    shift 2
+                else
+                    return $ERR_MISSING_VALUE
+                fi
+                ;;
+            use-psk)
+                if [[ -n "$2" && ! "$2" =~ ^(private-key|allowed-ips|use-psk)$ ]]; then
+                    use_psk="$2"
+                    generate_psk=false
+                    shift 2
+                else
+                    generate_psk=true
+                    shift 1
+                fi
                 ;;
             *)
                 return $ERR_UNKNOWN_PARAM
                 ;;
         esac
     done
+
+    # generate a psk if not provided
+    if [[ "$generate_psk" == true ]]; then
+        use_psk="$(openssl rand --base64 32)"
+    fi
 
     # Generate key pair if not provided
     if [[ -z "$private_key" ]]; then
@@ -836,8 +869,10 @@ add_peer() {
                      --arg public_key "$public_key" \
                      --arg private_key "$private_key" \
                      --arg allowed_ips "$allowed_ips" \
+                     --arg use_psk "$use_psk" \
+                     --arg generate_psk "$generate_psk" \
                      --arg status "enable" \
-        '.peers[$peer_name] = {"privateKey": $private_key, "publicKey": $public_key, "allowedIPs": $allowed_ips, "status": $status}' <<< "$json_config")
+        '.peers[$peer_name] = {"privateKey": $private_key, "publicKey": $public_key, "allowedIPs": $allowed_ips, "usePSK": $use_psk, "generatePSK": $generatePSK, "status": $status}' <<< "$json_config")
 
     # Save configuration to file
     echo "$json_config" > "$DB_PATH/$interface_name.json" || return $ERR_FAILED_TO_SAVE_CONFIG
