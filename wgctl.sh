@@ -702,7 +702,7 @@ export_peer() {
 
     # add a PSK if exists
     local use_psk=$(jq -r --arg peer "$peer_name" '.peers[$peer].privateKey' <<< "$json_config")
-    if [ -n $use_psk ] then
+    if [ -n $use_psk ]; then
         peer_config+="PresharedKey = $use_psk\n"
     fi
 
