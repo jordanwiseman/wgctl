@@ -770,35 +770,35 @@ add_peer() {
     fi
 
     # Parse arguments
-    # (using a different pattern as "use-psk" may not have a value passed)
     local private_key="" allowed_ips="" use_psk="" use_psk="" generate_psk=false
+    local psk_regex='^[A-Za-z0-9+/]{43}=$'
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             private-key)
-                if [[ -n "$2" && ! "$2" =~ ^(private-key|allowed-ips|use-psk)$ ]]; then
-                    private_key="$2"
-                    shift 2
-                else
+                if [[ -z "${2-}" || "$2" == "private-key" || "$2" == "allowed-ips" || "$2" == "use-psk" ]]; then
                     return $ERR_MISSING_VALUE
                 fi
+                private_key="$2"
+                shift 2
                 ;;
             allowed-ips)
-                if [[ -n "$2" && ! "$2" =~ ^(private-key|allowed-ips|use-psk)$ ]]; then
-                    allowed_ips="$2"
-                    shift 2
-                else
+                if [[ -z "${2-}" || "$2" == "private-key" || "$2" == "allowed-ips" || "$2" == "use-psk" ]]; then
                     return $ERR_MISSING_VALUE
                 fi
+                allowed_ips="$2"
+                shift 2
                 ;;
             use-psk)
-                if [[ -n "$2" && ! "$2" =~ ^(private-key|allowed-ips|use-psk)$ ]]; then
-                    use_psk="$2"
-                    generate_psk=false
-                    shift 2
-                else
+                if [[ -z "${2-}" || "$2" == "private-key" || "$2" == "allowed-ips" || "$2" == "use-psk" ]]; then
                     generate_psk=true
                     shift 1
+                else
+                    use_psk="$2"
+                    if [[ ! "$use_psk" =~ $psk_regex ]]; then
+                        return $ERR_INVALID_PSK
+                    fi
+                    shift 2
                 fi
                 ;;
             *)
