@@ -414,7 +414,15 @@ show_interface() {
         ' <<< "$json_config"
         
         # Print peers section from JSON configuration in INI format(print empty line after each peer)
-        jq -r '.peers | to_entries[] | "\n[Peer]\nName = \(.key)\nPublicKey = \(.value.publicKey)\nAllowedIPs = \(.value.allowedIPs)\nStatus = \(.value.status)"' <<< "$json_config"
+        jq -r '
+            .peers 
+            | to_entries[] 
+            | "\n[Peer]\nName = \(.key)\n"
+            + "PublicKey = \(.value.publicKey)\n"
+            + "AllowedIPs = \(.value.allowedIPs)\n"
+            + "Status = \(.value.status)"
+            + (if .value.usePSK? then "\nPresharedKey = \(.value.usePSK)" else "" end)
+        ' <<< "$json_config"
     fi
 
     return 0
@@ -709,7 +717,7 @@ export_peer() {
 
     # add a PSK if one exists for the peer
     local use_psk=$(jq -r --arg peer "$peer_name" '.peers[$peer].usePSK' <<< "$json_config")
-    if [ -n $use_psk ]; then
+    if [ -n "$use_psk" ]; then
         peer_config+="\nPresharedKey = $use_psk"
     fi
 
@@ -877,9 +885,16 @@ add_peer() {
                      --arg public_key "$public_key" \
                      --arg private_key "$private_key" \
                      --arg allowed_ips "$allowed_ips" \
-                     --arg use_psk "$use_psk" \
                      --arg status "enable" \
-        '.peers[$peer_name] = {"privateKey": $private_key, "publicKey": $public_key, "allowedIPs": $allowed_ips, "usePSK": $use_psk, "status": $status}' <<< "$json_config")
+        '.peers[$peer_name] = {"privateKey": $private_key, "publicKey": $public_key, "allowedIPs": $allowed_ips, "status": $status}' <<< "$json_config")
+
+    # append psk to json_confiog if exists
+    if [ -n "$use_psk" ]; then
+        json_config+=$(jq \
+            --arg peer_name "$peer_name" \
+            --arg use_psk "$use_psk" \
+            '.peers[$peer_name] += {"use_psk": $use_psk}' <<< "$json_config")
+    fi
 
     # Save configuration to file
     echo "$json_config" > "$DB_PATH/$interface_name.json" || return $ERR_FAILED_TO_SAVE_CONFIG
