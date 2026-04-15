@@ -180,6 +180,10 @@ wgctl help
   sudo wgctl add peer1 for mywg allowed-ips 10.0.0.2/32
   ```
 
+  ```bash
+  sudo wgctl add peer2 for mywg allowed-ips 10.0.0.3/32 use-psk
+  ```
+
 - **Exporting a Peer Configuration:**
 
   ```bash
