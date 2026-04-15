@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # Variables
 SCRIPT_NAME=$(basename "$0")
@@ -304,7 +304,7 @@ create_interface() {
 
     # Make sure port is valid
     if [[ ! "$listen_port" =~ ^[0-9]+$ ]] || [ "$listen_port" -lt 1 ] || [ "$listen_port" -gt 65535 ]; then
-        return #ERR_INVALID_PORT
+        return $ERR_INVALID_PORT
     fi
     
     # Validate Private Key if provided or generate new key pair
@@ -716,7 +716,7 @@ export_peer() {
     peer_config+="AllowedIPs = 0.0.0.0/0, ::"
 
     # add a PSK if one exists for the peer
-    local use_psk=$(jq -r --arg peer "$peer_name" '.peers[$peer].usePSK' <<< "$json_config")
+    local use_psk=$(jq -r --arg peer "$peer_name" '.peers[$peer].usePSK // empty' <<< "$json_config")
     if [ -n "$use_psk" ]; then
         peer_config+="\nPresharedKey = $use_psk"
     fi
@@ -888,12 +888,12 @@ add_peer() {
                      --arg status "enable" \
         '.peers[$peer_name] = {"privateKey": $private_key, "publicKey": $public_key, "allowedIPs": $allowed_ips, "status": $status}' <<< "$json_config")
 
-    # append psk to json_confiog if exists
+    # append psk to json_config if exists
     if [ -n "$use_psk" ]; then
-        json_config+=$(jq \
+        json_config=$(jq \
             --arg peer_name "$peer_name" \
             --arg use_psk "$use_psk" \
-            '.peers[$peer_name] += {"use_psk": $use_psk}' <<< "$json_config")
+            '.peers[$peer_name] += {"usePSK": $use_psk}' <<< "$json_config")
     fi
 
     # Save configuration to file
