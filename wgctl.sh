@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # Variables
 SCRIPT_NAME=$(basename "$0")
